@@ -2,15 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Line } from "react-chartjs-2";
 import "./style.scss";
+import { connect } from "react-redux";
+import { fetchCoinData } from "../../actions/actions";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import Notification from "../Notification/Notification";
 
-const Item = () => {
-
+const Item = ({getCoin, coin, isFetched, notification}) => {
+ 
   let { id } = useParams();
-  const itemUrl = `/item/${id}`;
-
-  const [itemData, setItemData] = useState([]);
   const [currency, setCurrency] = useState([])
-
   const [toggleWeek, setToggleWeek] = useState(true)
   const [toggleMonth, setToggleMonth] = useState(false);
   const [toggleYear, setToggleYear] = useState(false);
@@ -19,77 +19,77 @@ const Item = () => {
   const [minRevenue, setMinRevenue] = useState(0)
   const [mediumRevenue, setMediumRevenue] = useState(0)
   const [maxRevenue, setMaxRevenue] = useState(0)
- 
+
   useEffect( () => {
-    fetchData();
+  id && getCoin(`/item/${id}`)
+
   }, []);
 
-  const fetchData = async () => {
-    const response = await fetch(itemUrl);
-    const item = await response.json();
-    setItemData(item.data.filter((item) => item.curency !== 'null'));
-  };
  
-  const sortDate = (array) => {
+  const sortCurrencyByDate = (array) => {
     return array.sort((a, b) => new Date(b.date) - new Date(a.date));
   };
-  sortDate(itemData);
-  const sortArray = (array) => {
-    return array.sort((a, b) => a - b)
-  }
+  sortCurrencyByDate(currency);
+
 
   const handleWeekChart = () => {
-    let data = itemData.map(item => item.curency)
-    let weekData = data.slice(0,7)
-
-    sortArray(weekData)
+    let coinData = coin.map(item => item.curency)
+    let weekData = coinData.slice(0,7)
 
     let total = weekData.reduce((a,b) => Math.trunc(Number(a) + Number(b)),0);
-    setTotalRevenue(total)
-    setMinRevenue(Math.trunc(weekData[0]))
-    setMediumRevenue(Math.trunc(total / weekData.length))
-    setMaxRevenue(Math.trunc(weekData[weekData.length - 1]))
+    let min = Math.trunc(weekData[0])
+    let med = Math.trunc(total / weekData.length)
+    let max = Math.trunc(weekData[weekData.length - 1])
+   
     setCurrency(weekData)
-
+    setTotalRevenue(total)
+    setMinRevenue(min)
+    setMediumRevenue(med)
+    setMaxRevenue(max)
+    
     setToggleWeek(true)
-    setToggleYear(false)
     setToggleMonth(false)
+    setToggleYear(false)
   }
  
   const handleMonthChart = () => {
-    let data = itemData.map(item => item.curency)
-    let monthData = data.slice(0,30)
+    let coinData = coin.map(item => item.curency)
+    let monthData = coinData.slice(0,30)
 
-    sortArray(monthData)
-
-    let total = monthData.reduce((a,b) => Math.trunc(Number(a) + Number(b)),0);
-    setTotalRevenue(total)
-    setMinRevenue(Math.trunc(monthData[0]))
-    setMediumRevenue(Math.trunc(total / monthData.length))
-    setMaxRevenue(Math.trunc(monthData[monthData.length - 1]))
+    let total = monthData.reduce((a,b) => Math.trunc(Number(a) + Number(b)), 0);
+    let min = Math.trunc(monthData[0])
+    let med = Math.trunc(total / monthData.length)
+    let max = Math.trunc(monthData[monthData.length - 1])
+   
     setCurrency(monthData)
-
-    setToggleMonth(true)
+    setTotalRevenue(total)
+    setMinRevenue(min)
+    setMediumRevenue(med)
+    setMaxRevenue(max)
+  
     setToggleWeek(false)
+    setToggleMonth(true)
     setToggleYear(false)
   }
 
   const handleYearChart = () => {
-    let data = itemData.map(item => item.curency)
+    let data = coin.map(item => item.curency)
     let yearData = data.slice(0,365)
-
-    sortArray(yearData)
-
+    console.log(yearData)
     let total = yearData.reduce((a,b) => Math.trunc(Number(a) + Number(b)),0);
-    setTotalRevenue(total)
-    setMinRevenue(Math.trunc(yearData[0]))
-    setMediumRevenue(Math.trunc(total / yearData.length))
-    setMaxRevenue(Math.trunc(yearData[yearData.length - 1]))
-    setCurrency(yearData)
+    let min = Math.trunc(yearData[0])
+    let med = Math.trunc(total / yearData.length)
+    let max = Math.trunc(yearData[yearData.length - 1])
 
-    setToggleYear(true)
-    setToggleMonth(false)
+    setCurrency(yearData)
+    setTotalRevenue(total)
+    setMinRevenue(min)
+    setMediumRevenue(med)
+    setMaxRevenue(max)
+    
     setToggleWeek(false)
+    setToggleMonth(false)
+    setToggleYear(true)
   }
   
   const weekData = {
@@ -142,6 +142,9 @@ const Item = () => {
   };
 
   return (
+    <>
+    <Notification notification={notification}/>
+    {isFetched ? (
     <div className="item-container">
       <header className="header">
         <div className="title">Revenue</div>
@@ -172,7 +175,29 @@ const Item = () => {
           <span className="info-amount">{`$ ${maxRevenue}`}</span>
         </div>
       </div>
-    </div>
+    </div>)
+ : (
+      <div className="loader-block">
+          <h1 className="loader">Data loading...</h1>
+          <CircularProgress></CircularProgress>
+        </div>
+    )}
+    </>
   );
 };
-export default Item;
+
+const mapStateToProps = state => {
+  return {
+    notification: state.notification,
+    coin: state.coin,
+    isFetched: state.isFetched
+  }
+}
+const mapDispatchToProps = dispatch => {
+  return {
+    getCoin: (payload) => dispatch(fetchCoinData(payload))
+  }
+}
+
+
+export default connect(mapStateToProps, mapDispatchToProps)(Item);
